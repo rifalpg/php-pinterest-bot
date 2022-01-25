@@ -24,9 +24,10 @@
         }
     },
     "require": {
-        "php": ">=7.0",
+        "php": "^7.3|^8.0",
         "ext-curl": "*",
-        "ext-fileinfo": "*"
+        "ext-fileinfo": "*",
+        "php-webdriver/webdriver": "^1.12"
     },
     "require-dev": {
         "codeclimate/php-test-reporter": "^0.4",

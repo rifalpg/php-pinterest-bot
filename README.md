@@ -54,6 +54,10 @@ The recommended way to install this library is via [Composer](https://getcompose
 composer require seregazhuk/pinterest-bot
 ```
 
+### Selenium
+[https://tecadmin.net/setup-selenium-chromedriver-on-ubuntu/](https://tecadmin.net/setup-selenium-chromedriver-on-ubuntu/) - reference for install selenium
+[https://gist.github.com/mylk/6fe812863c5a44f7ff8116f48cc22492](https://gist.github.com/mylk/6fe812863c5a44f7ff8116f48cc22492) - referece for creating service
+
 ## Quick Start
 
 ```php 

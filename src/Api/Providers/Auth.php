@@ -2,7 +2,13 @@
 
 namespace seregazhuk\PinterestBot\Api\Providers;
 
+use Facebook\WebDriver\Chrome\ChromeOptions;
+use Facebook\WebDriver\Remote\DesiredCapabilities;
+use Facebook\WebDriver\Remote\RemoteWebDriver;
+use Facebook\WebDriver\WebDriverBy as By;
+use Facebook\WebDriver\WebDriverExpectedCondition as EC;
 use LogicException;
+use seregazhuk\PinterestBot\Helpers\Cookies;
 use seregazhuk\PinterestBot\Helpers\UrlBuilder;
 use seregazhuk\PinterestBot\Api\Forms\Registration;
 use seregazhuk\PinterestBot\Api\Providers\Core\Provider;
@@ -47,6 +53,21 @@ class Auth extends Provider
         }
 
         return $this->processLogin($username, $password);
+    }
+
+    public function loginWithSelenium($username, $password, $port = 9515, $autoLogin = true)
+    {
+        if ($this->isLoggedIn()) {
+            return true;
+        }
+
+        $this->checkCredentials($username, $password);
+
+        if ($autoLogin && $this->processAutoLogin($username)) {
+            return true;
+        }
+
+        return $this->processLoginSelenium($username, $password, $port);
     }
 
     public function logout()
@@ -108,8 +129,8 @@ class Auth extends Provider
     {
         $data = [
             'business_name' => $businessName,
-            'website_url'   => $websiteUrl,
-            'account_type'  => 'other',
+            'website_url' => $websiteUrl,
+            'account_type' => 'other',
         ];
 
         return $this->post(UrlBuilder::RESOURCE_CONVERT_TO_BUSINESS, $data);
@@ -181,7 +202,7 @@ class Auth extends Provider
 
         $credentials = [
             'username_or_email' => $username,
-            'password'          => $password,
+            'password' => $password,
         ];
 
         $this->post(UrlBuilder::RESOURCE_LOGIN, $credentials);
@@ -193,6 +214,65 @@ class Auth extends Provider
         $this->request->login();
 
         return true;
+    }
+
+    protected function processLoginSelenium($username, $password, $port)
+    {
+        try {
+            $serverUrl = "http://localhost:$port";
+            $chromeOptions = new ChromeOptions();
+            $chromeOptions->addArguments(['--headless']);
+            $chromeOptions->addArguments(['--lang=en']);
+
+            $capabilities = DesiredCapabilities::chrome();
+            $capabilities->setCapability(ChromeOptions::CAPABILITY_W3C, $chromeOptions);
+
+            $driver = RemoteWebDriver::create($serverUrl, $capabilities);
+            $driver->get("https://pinterest.com/login");
+
+            $driver->wait()->until(EC::elementToBeClickable(By::id('email')));
+
+            $driver->findElement(By::id('email'))->sendKeys($username);
+            $driver->findElement(By::id('password'))->sendKeys($password);
+
+            $logins = $driver->findElements(By::xpath("//*[contains(text(), 'Log in')]"));
+
+            foreach ($logins as $login) {
+                $login->click();
+            }
+
+            $driver->wait()->until(EC::invisibilityOfElementLocated(By::id('email')));
+
+            $cookies = $driver->manage()->getCookies();
+            $http = $this->request->getHttpClient();
+            $cookieName = $http::COOKIE_PREFIX . $username;
+            $cookieJarFilePath = $http->getCookiesPath() . DIRECTORY_SEPARATOR . $cookieName;
+            foreach ($cookies as $cookie) {
+                $cookieArgs = [];
+                $cookieArgs[] = ($cookie->isHttpOnly() ? '#HttpOnly_' : '') . $cookie->getDomain();
+                $cookieArgs[] = 'TRUE';
+                $cookieArgs[] = $cookie->getPath();
+                $cookieArgs[] = $cookie->isSecure() ? 'TRUE' : 'FALSE';
+                $cookieArgs[] = $cookie->getExpiry() ?: '2145906000';
+                $cookieArgs[] = $cookie->getName();
+                $cookieArgs[] = $cookie->getValue();
+
+                $cookieStringLine = implode("\t", $cookieArgs) . "\n";
+
+                file_put_contents(
+                    $cookieJarFilePath,
+                    $cookieStringLine,
+                    FILE_APPEND
+                );
+            }
+
+            $this->request->login();
+
+            $driver->close();
+            return true;
+        } catch (\Exception $exception) {
+            return false;
+        }
     }
 
     /**
