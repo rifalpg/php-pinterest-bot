@@ -219,7 +219,7 @@ class Auth extends Provider
     protected function processLoginSelenium($username, $password, $port)
     {
         try {
-            $serverUrl = "http://localhost:$port";
+            $serverUrl = "http://localhost:$port/wd/hub";
             $chromeOptions = new ChromeOptions();
             $chromeOptions->addArguments(['--headless']);
             $chromeOptions->addArguments(['--lang=en']);
@@ -271,7 +271,7 @@ class Auth extends Provider
             $driver->close();
             return true;
         } catch (\Exception $exception) {
-            return false;
+            throw $exception;
         }
     }
 
