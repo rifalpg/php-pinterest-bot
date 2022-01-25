@@ -55,7 +55,7 @@ class Auth extends Provider
         return $this->processLogin($username, $password);
     }
 
-    public function loginWithSelenium($username, $password, $port = 9515, $autoLogin = true)
+    public function loginWithSelenium($username, $password, $port = 4444, $autoLogin = true)
     {
         if ($this->isLoggedIn()) {
             return true;
